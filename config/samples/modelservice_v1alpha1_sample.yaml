@@ -1,0 +1,150 @@
+apiVersion: llm-d.ai/v1alpha1
+kind: ModelService
+metadata:
+  labels:
+    app.kubernetes.io/name: modelservice
+    app.kubernetes.io/managed-by: llmd-operator
+  name: llama2-7b-chat
+  namespace: test-llmd-1
+spec:
+  # Reference to base configuration ConfigMap that the LLMD operator creates
+  baseConfigMapRef:
+    name: llmd-base-config
+
+  # Model artifacts configuration - where to download the model from
+  modelArtifacts:
+    uri: "meta-llama/Llama-2-7b-chat-hf"
+    size: "15Gi"
+    authSecretName: "huggingface-secret"  # Secret containing HF_TOKEN for private models
+
+  # Routing configuration - how this model should be identified
+  routing:
+    modelName: "meta-llama/Llama-2-7b-chat-hf"
+
+  # Enable disaggregated serving (separate prefill and decode phases)
+  decoupleScaling: true
+
+  # Prefill component configuration (compute-bound phase)
+  prefill:
+    replicas: 2
+    containers:
+    - name: vllm-prefill
+      image: "ghcr.io/llm-d/llm-d:0.0.8"
+      command:
+      - "python"
+      - "-m"
+      - "vllm.entrypoints.openai.api_server"
+      args:
+      - "--model"
+      - "meta-llama/Llama-2-7b-chat-hf"
+      - "--tensor-parallel-size"
+      - "1"
+      - "--disable-log-requests"
+      - "--trust-remote-code"
+      - "--max-model-len"
+      - "4096"
+      - "--prefill-only"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      env:
+      - name: CUDA_VISIBLE_DEVICES
+        value: "0"
+      - name: HF_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: huggingface-secret
+            key: token
+      envFrom:
+      - configMapRef:
+          name: llmd-base-config
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1"
+
+  # Decode component configuration (memory bandwidth-bound phase)
+  decode:
+    replicas: 4
+    containers:
+    - name: vllm-decode
+      image: "ghcr.io/llm-d/llm-d:0.0.8"
+      command:
+      - "python"
+      - "-m"
+      - "vllm.entrypoints.openai.api_server"
+      args:
+      - "--model"
+      - "meta-llama/Llama-2-7b-chat-hf"
+      - "--tensor-parallel-size"
+      - "1"
+      - "--disable-log-requests"
+      - "--trust-remote-code"
+      - "--max-model-len"
+      - "4096"
+      - "--decode-only"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      env:
+      - name: CUDA_VISIBLE_DEVICES
+        value: "0"
+      - name: HF_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: huggingface-secret
+            key: token
+      envFrom:
+      - configMapRef:
+          name: llmd-base-config
+      resources:
+        requests:
+          cpu: "1"
+          memory: "4Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "2"
+          memory: "8Gi"
+          nvidia.com/gpu: "1"
+
+  # Endpoint Picker component (intelligent routing between prefill/decode)
+  endpointPicker:
+    replicas: 1
+    containers:
+    - name: endpoint-picker
+      image: "ghcr.io/llm-d/llm-d-inference-scheduler:0.0.4"
+      command:
+      - "python"
+      - "-m"
+      - "llm_d.endpoint_picker"
+      args:
+      - "--prefill-service"
+      - "llama2-7b-chat-prefill"
+      - "--decode-service"
+      - "llama2-7b-chat-decode"
+      - "--model-name"
+      - "meta-llama/Llama-2-7b-chat-hf"
+      - "--port"
+      - "8080"
+      env:
+      - name: ENABLE_CACHE_TRANSFER
+        value: "true"
+      - name: CACHE_TRANSFER_METHOD
+        value: "tcp"
+      envFrom:
+      - configMapRef:
+          name: llmd-base-config
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi" 

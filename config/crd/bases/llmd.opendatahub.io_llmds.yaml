@@ -1,0 +1,536 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: llmds.llmd.opendatahub.io
+spec:
+  group: llmd.opendatahub.io
+  names:
+    kind: LLMD
+    listKind: LLMDList
+    plural: llmds
+    singular: llmd
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.modelServiceController.ready
+      name: Controller Ready
+      type: boolean
+    - jsonPath: .status.redis.ready
+      name: Redis Ready
+      type: boolean
+    - jsonPath: .status.gateway.ready
+      name: Gateway Ready
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          LLMD is the Schema for the llmds API
+          LLMD is a meta-operator that deploys and manages llm-d infrastructure components
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              LLMDSpec defines the desired state of LLMD
+              LLMD is a meta-operator that deploys llm-d infrastructure components
+            properties:
+              configMapPresets:
+                description: ConfigMapPresets defines which configuration presets
+                  to create
+                items:
+                  type: string
+                type: array
+              gateway:
+                description: Gateway configures the Gateway API resources for external
+                  access
+                properties:
+                  className:
+                    default: kgateway
+                    description: ClassName specifies the Gateway class name
+                    type: string
+                  enabled:
+                    default: true
+                    description: Enabled determines whether to create Gateway resources
+                    type: boolean
+                  host:
+                    description: Host specifies the hostname for external access
+                    type: string
+                  serviceType:
+                    default: NodePort
+                    description: ServiceType specifies the Gateway service type
+                    enum:
+                    - LoadBalancer
+                    - NodePort
+                    - ClusterIP
+                    type: string
+                required:
+                - enabled
+                type: object
+              modelServiceController:
+                description: ModelServiceController configures the llm-d ModelService
+                  controller deployment
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled determines whether to deploy the ModelService
+                      controller
+                    type: boolean
+                  image:
+                    description: Image specifies the ModelService controller image
+                    type: string
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: NodeSelector specifies node selection constraints
+                    type: object
+                  replicas:
+                    default: 1
+                    description: Replicas specifies the number of controller replicas
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources specifies resource requirements for the
+                      controller
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This is an alpha field and requires enabling the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  tolerations:
+                    description: Tolerations specifies pod tolerations
+                    items:
+                      description: |-
+                        The pod this Toleration is attached to tolerates any taint that matches
+                        the triple <key,value,effect> using the matching operator <operator>.
+                      properties:
+                        effect:
+                          description: |-
+                            Effect indicates the taint effect to match. Empty means match all taint effects.
+                            When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                          type: string
+                        key:
+                          description: |-
+                            Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                            If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                          type: string
+                        operator:
+                          description: |-
+                            Operator represents a key's relationship to the value.
+                            Valid operators are Exists and Equal. Defaults to Equal.
+                            Exists is equivalent to wildcard for value, so that a pod can
+                            tolerate all taints of a particular category.
+                          type: string
+                        tolerationSeconds:
+                          description: |-
+                            TolerationSeconds represents the period of time the toleration (which must be
+                            of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                            it is not set, which means tolerate the taint forever (do not evict). Zero and
+                            negative values will be treated as 0 (evict immediately) by the system.
+                          format: int64
+                          type: integer
+                        value:
+                          description: |-
+                            Value is the taint value the toleration matches to.
+                            If the operator is Exists, the value should be empty, otherwise just a regular string.
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - enabled
+                type: object
+              monitoring:
+                description: Monitoring configures metrics collection and monitoring
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled determines whether to enable monitoring
+                    type: boolean
+                  serviceMonitor:
+                    description: ServiceMonitor configures ServiceMonitor resources
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled determines whether to create ServiceMonitor
+                          resources
+                        type: boolean
+                      interval:
+                        default: 15s
+                        description: Interval specifies the scrape interval
+                        type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to ServiceMonitor resources
+                        type: object
+                    required:
+                    - enabled
+                    type: object
+                required:
+                - enabled
+                type: object
+              namespace:
+                description: |-
+                  Namespace specifies the target namespace for llm-d components
+                  If not specified, uses the same namespace as the LLMD resource
+                type: string
+              redis:
+                description: Redis configures the Redis deployment for KV cache and
+                  smart routing
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled determines whether to deploy Redis
+                    type: boolean
+                  external:
+                    description: External configures external Redis connection
+                    properties:
+                      host:
+                        description: Host is the Redis server host
+                        type: string
+                      password:
+                        description: Password is the Redis password
+                        type: string
+                      passwordSecret:
+                        description: PasswordSecret references a secret containing
+                          the Redis password
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      port:
+                        default: 6379
+                        description: Port is the Redis server port
+                        format: int32
+                        type: integer
+                    type: object
+                  internal:
+                    description: Internal configures internal Redis deployment
+                    properties:
+                      image:
+                        description: Image specifies the Redis image
+                        type: string
+                      persistence:
+                        description: Persistence configures Redis persistence
+                        properties:
+                          enabled:
+                            default: true
+                            description: Enabled determines whether to enable Redis
+                              persistence
+                            type: boolean
+                          size:
+                            default: 8Gi
+                            description: Size specifies the persistent volume size
+                            type: string
+                          storageClass:
+                            description: StorageClass specifies the storage class
+                            type: string
+                        required:
+                        - enabled
+                        type: object
+                      resources:
+                        description: Resources specifies resource requirements for
+                          Redis
+                        properties:
+                          claims:
+                            description: |-
+                              Claims lists the names of resources, defined in spec.resourceClaims,
+                              that are used by this container.
+
+                              This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate.
+
+                              This field is immutable. It can only be set for containers.
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name must match the name of one entry in pod.spec.resourceClaims of
+                                    the Pod where this field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                                request:
+                                  description: |-
+                                    Request is the name chosen for a request in the referenced claim.
+                                    If empty, everything from the claim is made available, otherwise
+                                    only the result of this request.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                              If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                              otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                    type: object
+                required:
+                - enabled
+                type: object
+            type: object
+          status:
+            description: LLMDStatus defines the observed state of LLMD
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the LLMD state
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              configMapPresets:
+                description: ConfigMapPresets shows the status of ConfigMap presets
+                items:
+                  description: ConfigMapPresetStatus represents the status of a ConfigMap
+                    preset
+                  properties:
+                    message:
+                      description: Message provides additional information
+                      type: string
+                    name:
+                      description: Name is the name of the preset
+                      type: string
+                    ready:
+                      description: Ready indicates whether the preset is ready
+                      type: boolean
+                  required:
+                  - name
+                  - ready
+                  type: object
+                type: array
+              gateway:
+                description: Gateway shows the status of the Gateway resources
+                properties:
+                  lastUpdated:
+                    description: LastUpdated shows when the status was last updated
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message provides additional information about the
+                      component status
+                    type: string
+                  ready:
+                    description: Ready indicates whether the component is ready
+                    type: boolean
+                required:
+                - ready
+                type: object
+              modelServiceController:
+                description: ModelServiceController shows the status of the ModelService
+                  controller
+                properties:
+                  lastUpdated:
+                    description: LastUpdated shows when the status was last updated
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message provides additional information about the
+                      component status
+                    type: string
+                  ready:
+                    description: Ready indicates whether the component is ready
+                    type: boolean
+                required:
+                - ready
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  by the controller
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase of the LLMD deployment
+                type: string
+              redis:
+                description: Redis shows the status of the Redis deployment
+                properties:
+                  lastUpdated:
+                    description: LastUpdated shows when the status was last updated
+                    format: date-time
+                    type: string
+                  message:
+                    description: Message provides additional information about the
+                      component status
+                    type: string
+                  ready:
+                    description: Ready indicates whether the component is ready
+                    type: boolean
+                required:
+                - ready
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

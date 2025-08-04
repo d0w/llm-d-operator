@@ -1,0 +1,60 @@
+apiVersion: llm-d.ai/v1alpha1
+kind: ModelService
+metadata:
+  labels:
+    app.kubernetes.io/name: modelservice
+    app.kubernetes.io/managed-by: llmd-operator
+  name: llama2-7b-simple
+  namespace: default
+spec:
+  # Reference to base configuration ConfigMap that the LLMD operator creates
+  baseConfigMapRef:
+    name: llmd-base-config
+
+  # Model artifacts configuration - where to download the model from
+  modelArtifacts:
+    uri: "meta-llama/Llama-2-7b-chat-hf"
+    size: "15Gi"
+    # For public models, authSecretName can be omitted
+
+  # Routing configuration - how this model should be identified
+  routing:
+    modelName: "meta-llama/Llama-2-7b-chat-hf"
+
+  # Standard serving (not disaggregated) - single component handles both prefill and decode
+  decoupleScaling: false
+
+  # Single prefill component that handles the entire inference pipeline
+  prefill:
+    replicas: 1
+    containers:
+    - name: vllm-server
+      image: "ghcr.io/llm-d/llm-d:0.0.8"
+      command:
+      - "python"
+      - "-m"
+      - "vllm.entrypoints.openai.api_server"
+      args:
+      - "--model"
+      - "meta-llama/Llama-2-7b-chat-hf"
+      - "--tensor-parallel-size"
+      - "1"
+      - "--trust-remote-code"
+      - "--max-model-len"
+      - "4096"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      envFrom:
+      - configMapRef:
+          name: llmd-base-config
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1" 

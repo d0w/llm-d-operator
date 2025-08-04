@@ -1,0 +1,575 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: modelservices.llm-d.ai
+spec:
+  group: llm-d.ai
+  names:
+    kind: ModelService
+    listKind: ModelServiceList
+    plural: modelservices
+    shortNames:
+    - msvc
+    singular: modelservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.decoupleScaling
+      name: Decouple Scaling
+      type: boolean
+    - jsonPath: .status.prefillReady
+      name: Prefill READY
+      type: string
+    - jsonPath: .status.prefillAvailable
+      name: Prefill AVAIL
+      type: integer
+    - jsonPath: .status.decodeReady
+      name: Decode READY
+      type: string
+    - jsonPath: .status.decodeAvailable
+      name: Decode AVAIL
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ModelService is the Schema for the modelservices API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ModelServiceSpec defines the desired state of ModelService
+            properties:
+              baseConfigMapRef:
+                description: BaseConfigMapRef provides configuration needed to spawn objects owned by modelservice
+                properties:
+                  name:
+                    description: 'Name of the referent.'
+                    type: string
+                required:
+                - name
+                type: object
+              decode:
+                description: Decode is the decode portion of the spec
+                properties:
+                  containers:
+                    description: Container holds vllm container container details
+                    items:
+                      description: ContainerSpec defines container-level configuration.
+                      properties:
+                        args:
+                          description: 'Arguments to the entrypoint.'
+                          items:
+                            type: string
+                          type: array
+                        command:
+                          description: 'Entrypoint array. Not executed within a shell.'
+                          items:
+                            type: string
+                          type: array
+                        env:
+                          description: 'List of environment variables to set in the container.'
+                          items:
+                            description: EnvVar represents an environment variable present in a Container.
+                            properties:
+                              name:
+                                description: Name of the environment variable. Must be a C_IDENTIFIER.
+                                type: string
+                              value:
+                                description: 'Variable references $(VAR_NAME) are expanded'
+                                type: string
+                              valueFrom:
+                                description: Source for the environment variable's value.
+                                properties:
+                                  configMapKeyRef:
+                                    description: Selects a key of a ConfigMap.
+                                    properties:
+                                      key:
+                                        description: The key to select.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the ConfigMap or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                  secretKeyRef:
+                                    description: Selects a key of a secret in the pod's namespace
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select from.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                type: object
+                            required:
+                            - name
+                            type: object
+                          type: array
+                        envFrom:
+                          description: 'List of sources to populate environment variables in the container.'
+                          items:
+                            description: EnvFromSource represents the source of a set of ConfigMaps or Secrets
+                            properties:
+                              configMapRef:
+                                description: The ConfigMap to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap must be defined
+                                    type: boolean
+                                type: object
+                              prefix:
+                                description: Optional text to prepend to the name of each environment variable.
+                                type: string
+                              secretRef:
+                                description: The Secret to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret must be defined
+                                    type: boolean
+                                type: object
+                            type: object
+                          type: array
+                        image:
+                          description: Image that is used to spawn container if present
+                          type: string
+                        name:
+                          description: 'Name of the container specified as a DNS_LABEL.'
+                          type: string
+                        resources:
+                          description: 'Compute Resources required by this container.'
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of compute resources allowed.'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount of compute resources required.'
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  replicas:
+                    default: 1
+                    description: Replicas defines the desired number of replicas for this deployment.
+                    format: int32
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                type: object
+              decoupleScaling:
+                description: 'DecoupleScaling determines who owns the replica fields'
+                type: boolean
+              endpointPicker:
+                description: EndpointPicker is the endpoint picker (epp) portion of the spec
+                properties:
+                  containers:
+                    description: Container holds container details
+                    items:
+                      description: ContainerSpec defines container-level configuration.
+                      properties:
+                        args:
+                          description: 'Arguments to the entrypoint.'
+                          items:
+                            type: string
+                          type: array
+                        command:
+                          description: 'Entrypoint array. Not executed within a shell.'
+                          items:
+                            type: string
+                          type: array
+                        env:
+                          description: 'List of environment variables to set in the container.'
+                          items:
+                            description: EnvVar represents an environment variable present in a Container.
+                            properties:
+                              name:
+                                description: Name of the environment variable. Must be a C_IDENTIFIER.
+                                type: string
+                              value:
+                                description: 'Variable references $(VAR_NAME) are expanded'
+                                type: string
+                              valueFrom:
+                                description: Source for the environment variable's value.
+                                properties:
+                                  configMapKeyRef:
+                                    description: Selects a key of a ConfigMap.
+                                    properties:
+                                      key:
+                                        description: The key to select.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the ConfigMap or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                  secretKeyRef:
+                                    description: Selects a key of a secret in the pod's namespace
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select from.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                type: object
+                            required:
+                            - name
+                            type: object
+                          type: array
+                        envFrom:
+                          description: 'List of sources to populate environment variables in the container.'
+                          items:
+                            description: EnvFromSource represents the source of a set of ConfigMaps or Secrets
+                            properties:
+                              configMapRef:
+                                description: The ConfigMap to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap must be defined
+                                    type: boolean
+                                type: object
+                              prefix:
+                                description: Optional text to prepend to the name of each environment variable.
+                                type: string
+                              secretRef:
+                                description: The Secret to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret must be defined
+                                    type: boolean
+                                type: object
+                            type: object
+                          type: array
+                        image:
+                          description: Image that is used to spawn container if present
+                          type: string
+                        name:
+                          description: 'Name of the container specified as a DNS_LABEL.'
+                          type: string
+                        resources:
+                          description: 'Compute Resources required by this container.'
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of compute resources allowed.'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount of compute resources required.'
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  replicas:
+                    default: 1
+                    description: Replicas defines the desired number of replicas for this deployment.
+                    format: int32
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                type: object
+              modelArtifacts:
+                description: modelArtifacts provides information needed to download artifacts
+                properties:
+                  authSecretName:
+                    description: Name of the authentication secret. Contains HF_TOKEN
+                    type: string
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: 'Size of the model artifacts on disk'
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  uri:
+                    description: 'URI is the model URI'
+                    type: string
+                required:
+                - uri
+                type: object
+              prefill:
+                description: Prefill is the prefill portion of the spec
+                properties:
+                  containers:
+                    description: Container holds vllm container container details
+                    items:
+                      description: ContainerSpec defines container-level configuration.
+                      properties:
+                        args:
+                          description: 'Arguments to the entrypoint.'
+                          items:
+                            type: string
+                          type: array
+                        command:
+                          description: 'Entrypoint array. Not executed within a shell.'
+                          items:
+                            type: string
+                          type: array
+                        env:
+                          description: 'List of environment variables to set in the container.'
+                          items:
+                            description: EnvVar represents an environment variable present in a Container.
+                            properties:
+                              name:
+                                description: Name of the environment variable. Must be a C_IDENTIFIER.
+                                type: string
+                              value:
+                                description: 'Variable references $(VAR_NAME) are expanded'
+                                type: string
+                              valueFrom:
+                                description: Source for the environment variable's value.
+                                properties:
+                                  configMapKeyRef:
+                                    description: Selects a key of a ConfigMap.
+                                    properties:
+                                      key:
+                                        description: The key to select.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the ConfigMap or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                  secretKeyRef:
+                                    description: Selects a key of a secret in the pod's namespace
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select from.
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent.'
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                type: object
+                            required:
+                            - name
+                            type: object
+                          type: array
+                        envFrom:
+                          description: 'List of sources to populate environment variables in the container.'
+                          items:
+                            description: EnvFromSource represents the source of a set of ConfigMaps or Secrets
+                            properties:
+                              configMapRef:
+                                description: The ConfigMap to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap must be defined
+                                    type: boolean
+                                type: object
+                              prefix:
+                                description: Optional text to prepend to the name of each environment variable.
+                                type: string
+                              secretRef:
+                                description: The Secret to select from
+                                properties:
+                                  name:
+                                    description: 'Name of the referent.'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret must be defined
+                                    type: boolean
+                                type: object
+                            type: object
+                          type: array
+                        image:
+                          description: Image that is used to spawn container if present
+                          type: string
+                        name:
+                          description: 'Name of the container specified as a DNS_LABEL.'
+                          type: string
+                        resources:
+                          description: 'Compute Resources required by this container.'
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of compute resources allowed.'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount of compute resources required.'
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  replicas:
+                    default: 1
+                    description: Replicas defines the desired number of replicas for this deployment.
+                    format: int32
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                type: object
+              routing:
+                description: Routing defines how this ModelService should be routed to
+                properties:
+                  modelName:
+                    description: ModelName is the name of the model to route to
+                    type: string
+                required:
+                - modelName
+                type: object
+            required:
+            - baseConfigMapRef
+            - modelArtifacts
+            - routing
+            type: object
+          status:
+            description: ModelServiceStatus defines the observed state of ModelService
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                items:
+                  description: Condition contains details for one aspect of the current state
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition transitioned
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating details
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              decodeAvailable:
+                description: DecodeAvailable is the number of available decode replicas
+                format: int32
+                type: integer
+              decodeReady:
+                description: DecodeReady indicates if decode deployments are ready
+                type: string
+              prefillAvailable:
+                description: PrefillAvailable is the number of available prefill replicas
+                format: int32
+                type: integer
+              prefillReady:
+                description: PrefillReady indicates if prefill deployments are ready
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {} 

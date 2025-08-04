@@ -1,0 +1,59 @@
+apiVersion: llmd.opendatahub.io/v1alpha1
+kind: LLMD
+metadata:
+  labels:
+    app.kubernetes.io/name: llmd-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: llmd-sample
+spec:
+  # Deploy llm-d ModelService controller
+  modelServiceController:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+  # Deploy Redis for KV cache and smart routing
+  redis:
+    enabled: true
+    internal:
+      persistence:
+        enabled: true
+        size: "8Gi"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "250m"
+          memory: "256Mi"
+
+  # Configure Gateway for external access
+  gateway:
+    enabled: true
+    className: "kgateway"
+    serviceType: "NodePort"
+    host: "llm-d.local"
+
+  # Create ConfigMap presets for common configurations
+  configMapPresets:
+    - "basic-gpu-preset"
+    - "basic-gpu-with-nixl-preset" 
+    - "basic-gpu-with-nixl-and-redis-lookup-preset"
+
+  # Enable monitoring
+  monitoring:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: "15s"
+      labels:
+        prometheus.io/scrape: "true"
+
+  # Optional: Deploy to specific namespace
+  # namespace: "llm-d-system"
